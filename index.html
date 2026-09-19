@@ -148,6 +148,8 @@
     .set-row { display: flex; flex-direction: column; gap: 5px; }
     .set-row label { font-size: 11px; letter-spacing: 2px; color: var(--hud-dim); }
     .set-row label b { color: var(--hud); font-weight: normal; }
+    .set-note { font-size: 10px; letter-spacing: 1px; line-height: 1.5; color: var(--hud-dim); border-top: 1px solid rgba(217, 210, 191, 0.12); padding-top: 10px; }
+    .set-note b { color: var(--accent); font-weight: normal; }
     input[type="range"] { width: 100%; accent-color: var(--accent); background: transparent; }
     select, input[type="text"] {
       background: rgba(10, 12, 9, 0.9);
@@ -389,6 +391,9 @@
         <div class="set-row"><label>TRACK DUST <b id="vDust"></b></label><input type="range" id="setDust" min="0" max="1" step="1" /></div>
         <div class="set-row"><label>CAMERA SHAKE <b id="vShake"></b></label><input type="range" id="setShake" min="0" max="1" step="1" /></div>
         <div class="set-row"><label>HOLD TO AUTO-FIRE <b id="vHold"></b></label><input type="range" id="setHold" min="0" max="1" step="1" /></div>
+        <div class="set-row" style="grid-column:1 / -1;"><label>GAME SERVER (blank = this site)</label><input type="text" id="setServer" placeholder="wss://your-host/ws" spellcheck="false" /></div>
+        <div class="set-note">Play from a static host (GitHub Pages)? Enter your running game server
+          or share a link with <b>&amp;server=wss://your-host</b>. Example: Render / Railway free tier.</div>
       </div>
       <div class="lobby-actions"><button class="btn accent" id="btnSettingsLobbyBack">BACK</button></div>
     </div>

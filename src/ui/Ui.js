@@ -175,6 +175,16 @@ export class Ui {
     bind('setDust', (x) => (x.trackDust ? 1 : 0), (v) => (x.trackDust = Number(v) === 1, Number(v)));
     bind('setShake', (x) => (x.shake ? 1 : 0), (v) => (x.shake = Number(v) === 1, Number(v)));
     bind('setHold', (x) => (x.holdToFire ? 1 : 0), (v) => (x.holdToFire = Number(v) === 1, Number(v)));
+    // Game server override: '' = same origin, else http(s) host URL or bare host.
+    const srv = $('setServer');
+    if (srv) {
+      srv.value = s.server || '';
+      srv.addEventListener('change', () => {
+        this.settings.server = srv.value.trim();
+        saveSettings(this.settings);
+        if (this.actions.onServer) this.actions.onServer(this.settings.server);
+      });
+    }
     const gfx = $('setGfx');
     if (gfx) {
       gfx.value = s.graphics;

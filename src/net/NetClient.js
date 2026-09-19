@@ -6,8 +6,22 @@ import CONFIG from '../config.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import { S2C } from '../../shared/protocol.js';
 
+// Turn a user-supplied "server location" (https URL or bare host[:port]) into
+// a full ws(s) WebSocket endpoint on the game path (/ws).
+function serverToWsUrl(input) {
+  let u;
+  try {
+    u = new URL(input);
+  } catch {
+    u = new URL(`https://${input}`);
+  }
+  const proto = (u.protocol === 'https:' || u.protocol === 'wss:') ? 'wss' : 'ws';
+  const base = u.host + (u.pathname && u.pathname !== '/' ? u.pathname.replace(/\/$/, '') : '');
+  return `${proto}://${base}${CONFIG.net.wsPath}`;
+}
+
 export class NetClient extends EventEmitter {
-  constructor(name) {
+  constructor(name, settings = null) {
     super();
     this.name = name;
     this.ws = null;
@@ -20,13 +34,30 @@ export class NetClient extends EventEmitter {
     this._reconnectAttempts = 0;
     this._closedByUser = false;
     this._url = '';
+    this.server = (settings && settings.server) || '';
   }
 
   connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    this._url = `${proto}://${location.host}${CONFIG.net.wsPath}`;
+    const q = (new URLSearchParams(location.search).get('server') || '').trim();
+    const override = q || this.server;
+    if (override) {
+      this._url = serverToWsUrl(override);
+    } else {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      this._url = `${proto}://${location.host}${CONFIG.net.wsPath}`;
+    }
     this._closedByUser = false;
     this._open();
+  }
+
+  // Switch to a different game server (Settings screen). Empty value returns
+  // to same-origin behaviour.
+  setServer(url, { reconnect = true } = {}) {
+    this.server = (url || '').trim();
+    if (reconnect) {
+      this.close();
+      this.connect();
+    }
   }
 
   _open() {

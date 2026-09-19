@@ -117,11 +117,12 @@ async function boot() {
       onSelectTank: (id) => { game && game.selectTank(id); },
       onName: (name) => { if (net && net.connected) net.send({ type: 'hello' }); },
       onSettings: (s) => { audio.setVolumes(s.volume); _applyGraphics(s); },
+      onServer: (url) => { if (net) net.setServer(url); },
       onResume: () => { input.lock(); hud.setPause(false); focusGame(); },
       onBackToMenu: () => { net.leaveMatch(); ui.showMenu(); input.unlock(); hud.show(false); }
     });
 
-    net = new NetClient(settings.name);
+    net = new NetClient(settings.name, settings);
     net.on('open', () => { ui.setConnection('ONLINE'); audio.resume(); });
     net.on('close', ({ wasConnected }) => {
       ui.setConnection(wasConnected ? 'RECONNECTING…' : 'OFFLINE');

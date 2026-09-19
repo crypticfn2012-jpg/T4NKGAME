@@ -11,6 +11,7 @@ export const DEFAULTS = {
   shake: true,
   trackDust: true,
   holdToFire: false,           // false = click to fire, true = hold to auto-fire
+  server: '',                  // game server override ('' = same origin as the page)
   volume: {
     master: 0.8,
     sfx: 1.0,

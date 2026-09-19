@@ -40,15 +40,38 @@ more than one core) run it behind `pm2`/`cluster` on a VPS:
 pm2 start server/index.js -i max
 ```
 
-## 3. WebSocket notes
+## 3. Two-host setup: static client (GitHub Pages) + game server
 
-- The client connects to `ws(s)://<host>/ws` (same origin — see
-  `CONFIG.net.wsPath`).
+The client can point at a **different** game server than the one serving the
+page. Use this when the client is published somewhere static, like GitHub
+Pages (`Deploy TANKFIELD to Pages` workflow publishes `dist/`).
+
+The game server must be a real Node host that answers `/ws`:
+
+- **Render (one click):** the repo ships `render.yaml`. On Render use
+  *New → Blueprint → this repo*. It builds the client and serves both the
+  page and `/ws` at `https://tankfield.onrender.com`.
+- **Railway / Fly.io / any Node VPS:** `npm run build && npm start`.
+
+Then make the static Pages client connect to that server — two ways:
+
+- **Settings → GAME SERVER** (persisted per browser): fill in
+  `https://tankfield.onrender.com` (or any `http(s)://host[:port]`, or a bare
+  `host:port`) and it reconnects immediately.
+- **Shareable link** (no setup for friends):
+  `https://<you>.github.io/T4NKGAME/?server=https://tankfield.onrender.com`
+
+The override inserts the game's `/ws` path automatically, so the full
+`wss://…/ws` endpoint is optional in the box.
+
+## 4. WebSocket notes
+
+- The client connects to `ws(s)://<host>/ws` (same origin by default — see
+  `CONFIG.net.wsPath`); the Settings `server` override or a `?server=` query
+  switches hosts.
 - In dev, `vite.config.js` proxies `/ws` to `localhost:3000`.
-- The server requires HTTP/WS on the **same** host/port so it can serve the
-  static files **and** terminate the sockets. Don't put the client on a
-  separate static CDN unless you also route `/ws` to the game server and set
-  up CORS-ish allowances (the client uses same-origin-only URLs by default).
+- The server is origin-agnostic on `/ws`, so cross-host connections
+  (Pages → Render) work out of the box.
 
 ## Environment
 

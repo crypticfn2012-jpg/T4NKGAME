@@ -1,0 +1,15 @@
+# Render.com blueprint — one web service that serves the built client AND the
+# game WebSocket on the same origin. Deploy on Render:
+#   1. New → Blueprint → point it at this repo
+#   2. That's it (node service, free plan OK). Render sets PORT.
+services:
+  - type: web
+    name: tankfield
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 20
