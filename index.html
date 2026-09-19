@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#171a16" />
+  <title>TANKFIELD — Multiplayer Tank Combat</title>
+  <style>
+    :root {
+      --hud: #d9d2bf;
+      --hud-dim: #8f8a7c;
+      --accent: #d9a13c;
+      --danger: #c2452f;
+      --ok: #6d9a4a;
+      --panel: rgba(16, 18, 15, 0.82);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #171a16;
+      font-family: "Consolas", "SF Mono", "Courier New", monospace;
+      color: var(--hud);
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+    }
+
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    input, button { font-family: inherit; }
+    button { cursor: pointer; }
+
+    .btn {
+      background: rgba(217, 210, 191, 0.06);
+      border: 1px solid rgba(217, 210, 191, 0.35);
+      color: var(--hud);
+      padding: 10px 18px;
+      font-size: 13px;
+      letter-spacing: 2px;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .btn:hover { background: rgba(217, 210, 191, 0.16); border-color: var(--accent); color: #fff; }
+    .btn.accent { border-color: var(--accent); color: var(--accent); }
+    .btn.accent:hover { background: var(--accent); color: #171a16; }
+    .btn.mini { padding: 6px 10px; font-size: 11px; letter-spacing: 1px; }
+    .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(217, 210, 191, 0.16);
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ---------- UI screens ---------- */
+    .screen {
+      position: fixed; inset: 0;
+      display: none;
+      align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(20, 24, 18, 0.52), rgba(10, 12, 9, 0.92));
+      z-index: 8;
+      overflow: auto;
+    }
+    .screen.active { display: flex; }
+
+    .screen h1 {
+      font-size: 44px; letter-spacing: 14px; color: var(--accent);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    }
+    .screen h2 { font-size: 13px; letter-spacing: 6px; color: var(--hud-dim); margin-top: 8px; font-weight: normal; }
+    .screen h3 { font-size: 12px; letter-spacing: 3px; color: var(--accent); margin-bottom: 14px; font-weight: normal; }
+
+    .menu-card { text-align: center; padding: 40px 56px; }
+    .menu-buttons { margin-top: 36px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+    .menu-buttons .btn { width: 260px; margin: 0 auto; }
+
+    .boot-card { text-align: center; width: 420px; }
+    .boot-bar { height: 8px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(217, 210, 191, 0.25); margin-top: 26px; }
+    .boot-bar .fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s ease; }
+    .boot-text { margin-top: 14px; font-size: 12px; letter-spacing: 2px; color: var(--hud-dim); }
+
+    /* ---------- lobby ---------- */
+    #screen-lobby { flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 24px; gap: 22px; }
+    #screen-lobby h1 { font-size: 30px; letter-spacing: 10px; }
+    .lobby-grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; width: min(880px, 96vw); align-items: start; }
+    .lobby-panel { padding: 20px 22px; }
+    .conn { margin-top: 10px; font-size: 11px; letter-spacing: 2px; color: var(--hud-dim); }
+    .conn::before { content: "● "; color: var(--danger); }
+    .conn.online::before { color: var(--ok); }
+
+    #matchList { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; min-height: 60px; }
+    #matchList .empty { font-size: 12px; letter-spacing: 2px; color: var(--hud-dim); padding: 18px 0; text-align: center; }
+    .match {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border: 1px solid rgba(217, 210, 191, 0.14);
+      background: rgba(20, 22, 18, 0.5);
+    }
+    .match.mine { border-color: var(--accent); }
+    .match .m-name { flex: 1; font-size: 12px; letter-spacing: 1px; }
+    .match .m-count { color: var(--hud-dim); font-size: 12px; }
+    .match .m-status { color: var(--ok); font-size: 10px; letter-spacing: 1px; }
+    .match .m-you { color: var(--accent); font-size: 11px; letter-spacing: 1px; }
+
+    .tankcards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+    .tankcard {
+      text-align: left; padding: 10px 12px;
+      background: rgba(20, 22, 18, 0.6);
+      border: 1px solid rgba(217, 210, 191, 0.18);
+      color: var(--hud); display: flex; flex-direction: column; gap: 3px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .tankcard:hover { border-color: var(--hud-dim); }
+    .tankcard.selected { border-color: var(--accent); background: rgba(217, 161, 60, 0.08); }
+    .tankcard .t-name { font-size: 14px; letter-spacing: 2px; color: var(--accent); }
+    .tankcard .t-class { font-size: 10px; letter-spacing: 2px; color: var(--hud-dim); }
+    .tankcard .t-stats { font-size: 11px; letter-spacing: 1px; color: var(--hud); }
+
+    .lobby-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .hidden { display: none !important; }
+
+    /* ---------- settings / controls / about ---------- */
+    .form-panel { width: min(520px, 92vw); text-align: left; padding: 30px 34px; }
+    .settings-grid { display: flex; flex-direction: column; gap: 15px; }
+    .set-row { display: flex; flex-direction: column; gap: 5px; }
+    .set-row label { font-size: 11px; letter-spacing: 2px; color: var(--hud-dim); }
+    .set-row label b { color: var(--hud); font-weight: normal; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); background: transparent; }
+    select, input[type="text"] {
+      background: rgba(10, 12, 9, 0.9);
+      border: 1px solid rgba(217, 210, 191, 0.3);
+      color: var(--hud);
+      padding: 8px 12px;
+      font-size: 13px; letter-spacing: 1px;
+      width: 100%;
+    }
+    select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .keylist { display: grid; grid-template-columns: 96px 1fr; gap: 7px 16px; font-size: 12px; letter-spacing: 1px; }
+    .keylist b { color: var(--accent); font-weight: normal; }
+    .about-text { font-size: 12px; line-height: 1.9; letter-spacing: 1px; color: var(--hud); }
+
+    /* ---------- results ---------- */
+    #resultsList { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; letter-spacing: 1px; min-width: 320px; }
+    #resultsList .row { display: flex; justify-content: space-between; padding: 6px 10px; background: rgba(20, 22, 18, 0.6); border: 1px solid rgba(217, 210, 191, 0.12); }
+    #resultsTitle { margin-top: 16px; font-size: 28px; letter-spacing: 6px; }
+    #resultsScore { font-size: 22px; letter-spacing: 4px; color: var(--hud); margin-top: 8px; }
+
+    /* ---------- HUD ---------- */
+    #hud { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.4s ease; z-index: 5; }
+    #hud.on { opacity: 1; }
+
+    #crosshair { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: translate(-50%, -50%); }
+    #crosshair .l { position: absolute; background: var(--hud); box-shadow: 0 0 4px rgba(0, 0, 0, 0.8); }
+    #crosshair .l.t { width: 2px; height: 9px; left: -1px; top: -16px; }
+    #crosshair .l.b { width: 2px; height: 9px; left: -1px; top: 7px; }
+    #crosshair .l.le { width: 9px; height: 2px; top: -1px; left: -16px; }
+    #crosshair .l.ri { width: 9px; height: 2px; top: -1px; left: 7px; }
+    #crosshair .dot { position: absolute; width: 3px; height: 3px; left: -1.5px; top: -1.5px; border-radius: 50%; background: var(--accent); }
+
+    #reload { position: absolute; left: 50%; top: calc(50% + 18px); transform: translateX(-50%); width: 96px; height: 5px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(217, 210, 191, 0.25); }
+    #reload .fill { height: 100%; width: 100%; background: var(--accent); }
+    #reloadTag { position: absolute; left: 50%; top: 9px; transform: translateX(-50%); font-size: 10px; letter-spacing: 1px; color: var(--hud-dim); white-space: nowrap; }
+
+    #range { position: absolute; left: 50%; top: calc(50% + 40px); transform: translateX(-50%); font-size: 11px; letter-spacing: 1px; color: var(--hud-dim); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+
+    #health { position: absolute; left: 22px; bottom: 22px; padding: 12px 16px; width: 270px; }
+    #health .row { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 2px; margin-bottom: 7px; }
+    #health .row .weapon-name { color: var(--accent); }
+    #health .bar { height: 12px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(217, 210, 191, 0.25); }
+    #health .bar .fill { height: 100%; width: 100%; background: var(--ok); transition: width 0.15s ease, background-color 0.2s ease; }
+    #healthRow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; font-size: 10px; letter-spacing: 1px; color: var(--hud-dim); }
+    #healthRow .comp.warn { color: var(--accent); }
+    #healthRow .comp.dead { color: var(--danger); }
+
+    #target { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-size: 12px; letter-spacing: 2px; text-align: center; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+    #target .dir { color: var(--accent); font-size: 14px; }
+    #target .sub { color: var(--hud-dim); font-size: 10px; letter-spacing: 1px; }
+
+    #scorebar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 6px 14px; font-size: 15px; letter-spacing: 2px; }
+    #scorebar .team { font-size: 10px; letter-spacing: 2px; color: var(--hud-dim); }
+    #scorebar .score { font-size: 18px; color: var(--hud); min-width: 26px; text-align: center; }
+    #scorebar .score.steel { color: #b9c79c; }
+    #scorebar .score.iron { color: #d98b72; }
+    #timer { font-size: 14px; color: var(--hud); padding: 0 8px; border-left: 1px solid rgba(217, 210, 191, 0.25); border-right: 1px solid rgba(217, 210, 191, 0.25); }
+
+    #scoreboard {
+      position: absolute; right: 22px; top: 22px; width: 320px; max-height: 46vh;
+      padding: 12px 14px; overflow-y: auto; opacity: 0; transform: translateY(-6px);
+      transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: auto;
+    }
+    #scoreboard.on { opacity: 1; transform: none; }
+    #scoreboard h4 { font-size: 10px; letter-spacing: 3px; color: var(--hud-dim); margin-bottom: 8px; }
+    #boardList { display: flex; flex-direction: column; gap: 4px; font-size: 11px; letter-spacing: 1px; }
+    #boardList .row { display: flex; justify-content: space-between; gap: 8px; }
+    #boardList .row .name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #boardFooter { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; letter-spacing: 1px; color: var(--accent); }
+
+    #messages { position: absolute; left: 22px; top: 22px; width: 340px; display: flex; flex-direction: column; gap: 6px; }
+    #messages .msg { font-size: 12px; letter-spacing: 1px; padding: 6px 10px; background: rgba(16, 18, 15, 0.6); border-left: 3px solid var(--accent); opacity: 0; transform: translateX(-8px); transition: opacity 0.25s ease, transform 0.25s ease; }
+    #messages .msg.on { opacity: 1; transform: none; }
+
+    #debug { position: absolute; right: 22px; bottom: 22px; padding: 8px 12px; font-size: 11px; letter-spacing: 1px; color: var(--hud-dim); text-align: right; }
+    #fps { position: absolute; right: 22px; top: 22px; font-size: 11px; letter-spacing: 1px; color: var(--hud-dim); display: none; z-index: 6; }
+
+    #banner {
+      position: absolute; top: 16%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 34px; letter-spacing: 12px; color: var(--accent);
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    #banner.show { opacity: 1; }
+
+    #hitmarker { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; }
+    #hitmarker .h { position: absolute; width: 2px; height: 11px; background: var(--hud); left: -1px; }
+    #hitmarker .h.top { top: -20px; } #hitmarker .h.bottom { top: 9px; }
+    #hitmarker.active { animation: hitpop 0.18s ease-out; }
+    @keyframes hitpop { 0% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0; transform: scale(0.9); } }
+
+    #hitmarkerK { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; }
+    #hitmarkerK .h { position: absolute; width: 3px; height: 16px; background: var(--danger); left: -1.5px; }
+    #hitmarkerK .h.top { top: -26px; } #hitmarkerK .h.bottom { top: 10px; }
+    #hitmarkerK .h.left { transform: rotate(90deg); } #hitmarkerK .h.right { transform: rotate(90deg); }
+    #hitmarkerK.active { animation: hitpop 0.3s ease-out; }
+
+    #death {
+      position: fixed; inset: 0; z-index: 7;
+      display: none; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(80, 10, 5, 0.25), rgba(8, 6, 5, 0.8));
+    }
+    #death.on { display: flex; }
+    #death .card { text-align: center; color: var(--danger); }
+    #death .big { font-size: 44px; letter-spacing: 12px; color: var(--danger); }
+    #death .sub { font-size: 13px; letter-spacing: 4px; color: var(--hud-dim); margin-top: 10px; }
+
+    #vignette { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.12s ease; box-shadow: inset 0 0 140px 60px rgba(194, 69, 47, 0.55); z-index: 6; }
+
+    #hint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 11px; letter-spacing: 1px; color: var(--hud-dim); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); white-space: nowrap; }
+
+    /* ---------- overlays ---------- */
+    .overlay {
+      position: fixed; inset: 0; z-index: 9;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(8, 10, 7, 0.72);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .overlay.on { opacity: 1; pointer-events: auto; }
+    .overlay .card { position: relative; width: min(520px, 92vw); }
+
+    .overlay-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+
+    .fatal { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; text-align: center; padding: 30px; z-index: 20; }
+    .fatal h1 { color: var(--danger); letter-spacing: 8px; }
+    .fatal p { max-width: 560px; line-height: 1.8; color: var(--hud-dim); font-size: 13px; }
+    .fatal small { color: var(--hud); }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(217, 210, 191, 0.25); }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud">
+    <div id="crosshair"><div class="l t"></div><div class="l b"></div><div class="l le"></div><div class="l ri"></div><div class="dot"></div></div>
+    <div id="reload"><div class="fill"></div><div id="reloadTag">READY</div></div>
+    <div id="range"></div>
+
+    <div id="scorebar" class="panel">
+      <span class="team">STEEL</span><span class="score steel" id="scoreSteel">0</span>
+      <span id="timer">10:00</span>
+      <span class="score iron" id="scoreIron">0</span><span class="team">IRON</span>
+    </div>
+
+    <div id="health" class="panel">
+      <div class="row"><span>HULL INTEGRITY</span><span id="healthValue">100</span></div>
+      <div class="bar"><div class="fill" id="healthFill"></div></div>
+      <div id="healthRow"></div>
+    </div>
+
+    <div id="target" class="panel">
+      <div class="dir" id="targetDir">—</div>
+      <div class="sub" id="targetSub">NO CONTACT</div>
+    </div>
+
+    <div id="scoreboard" class="panel">
+      <h4>BATTLEFIELD INTEL — K / D</h4>
+      <div id="boardList"></div>
+      <div id="boardFooter"><span id="boardScore">0 — 0</span><span id="boardTimer"></span></div>
+    </div>
+
+    <div id="messages"></div>
+    <div id="debug"></div>
+    <div id="fps">--</div>
+    <div id="hint">— CLICK TO AIM · W/S DRIVE · A/D TURN · LMB FIRE · RMB ZOOM · WHEEL CAMERA · R RELOAD · ESC MENU —</div>
+  </div>
+
+  <div id="banner"><span id="bannerText"></span></div>
+  <div id="vignette"></div>
+  <div id="hitmarker"><div class="h top"></div><div class="h bottom"></div></div>
+  <div id="hitmarkerK"><div class="h top"></div><div class="h bottom"></div></div>
+
+  <!-- ============ BOOT ============ -->
+  <div class="screen active" id="screen-boot">
+    <div class="boot-card">
+      <h1>TANKFIELD</h1>
+      <h2>GENERATING BATTLEFIELD&hellip;</h2>
+      <div class="boot-bar"><div class="fill" id="bootBar"></div></div>
+      <div class="boot-text" id="bootText">INITIALISING EARTH SYSTEMS</div>
+    </div>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div class="screen" id="screen-menu">
+    <div class="menu-card">
+      <h1>TANKFIELD</h1>
+      <h2>MULTIPLAYER TANK COMBAT</h2>
+      <div class="set-row" style="margin-top:28px; text-align:left;">
+        <label>CALLSIGN</label>
+        <input type="text" id="nameField" maxlength="16" placeholder="TANKER" />
+      </div>
+      <div class="menu-buttons">
+        <button class="btn accent" id="btnMultiplayer">MULTIPLAYER</button>
+        <button class="btn" id="btnSettings">SETTINGS</button>
+        <button class="btn" id="btnControls">CONTROLS</button>
+        <button class="btn" id="btnAbout">ABOUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LOBBY ============ -->
+  <div class="screen" id="screen-lobby">
+    <h1>TANKFIELD</h1>
+    <h2>WAR ROOM</h2>
+    <div class="conn" id="connState">OFFLINE</div>
+    <div class="lobby-grid">
+      <div class="panel lobby-panel">
+        <h3>OPEN BATTLES</h3>
+        <div id="matchList"><div class="empty">WAITING FOR NETWORK&hellip;</div></div>
+        <button class="btn accent" id="btnCreate">CREATE MATCH</button>
+      </div>
+      <div class="panel lobby-panel hidden" id="inMatchPanel">
+        <h3>YOUR MATCH — <span id="matchIdLabel"></span></h3>
+        <div id="matchInfo">WAITING FOR CREW&hellip;</div>
+        <h3 style="margin-top:20px;">SELECT TANK</h3>
+        <div class="tankcards" id="tankCards"></div>
+        <div class="lobby-actions">
+          <button class="btn accent" id="btnStart">START BATTLE</button>
+          <button class="btn danger" id="btnLeave">LEAVE MATCH</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="screen-settings">
+    <div class="panel form-panel">
+      <h2 style="text-align:center;margin-bottom:24px;">SETTINGS</h2>
+      <div class="settings-grid">
+        <div class="set-row"><label>MASTER VOLUME <b id="vMaster"></b></label><input type="range" id="setMaster" min="0" max="1" step="0.05" /></div>
+        <div class="set-row"><label>EFFECTS VOLUME <b id="vSfx"></b></label><input type="range" id="setSfx" min="0" max="1" step="0.05" /></div>
+        <div class="set-row"><label>MUSIC VOLUME <b id="vMusic"></b></label><input type="range" id="setMusic" min="0" max="1" step="0.05" /></div>
+        <div class="set-row"><label>MOUSE SENSITIVITY <b id="vSens"></b></label><input type="range" id="setSens" min="0.2" max="3" step="0.05" /></div>
+        <div class="set-row"><label>GRAPHICS QUALITY</label><select id="setGfx"><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option></select></div>
+        <div class="set-row"><label>TRACK DUST <b id="vDust"></b></label><input type="range" id="setDust" min="0" max="1" step="1" /></div>
+        <div class="set-row"><label>CAMERA SHAKE <b id="vShake"></b></label><input type="range" id="setShake" min="0" max="1" step="1" /></div>
+        <div class="set-row"><label>HOLD TO AUTO-FIRE <b id="vHold"></b></label><input type="range" id="setHold" min="0" max="1" step="1" /></div>
+      </div>
+      <div class="lobby-actions"><button class="btn accent" id="btnSettingsLobbyBack">BACK</button></div>
+    </div>
+  </div>
+
+  <!-- ============ CONTROLS ============ -->
+  <div class="screen" id="screen-controls">
+    <div class="panel form-panel">
+      <h2 style="text-align:center;margin-bottom:24px;">CONTROLS</h2>
+      <div class="keylist">
+        <b>W / ↑</b><span>DRIVE FORWARD</span>
+        <b>S / ↓</b><span>REVERSE</span>
+        <b>A / D</b><span>TURN HULL LEFT / RIGHT</span>
+        <b>SPACE</b><span>BRAKE</span>
+        <b>MOUSE</b><span>AIM TURRET</span>
+        <b>LMB</b><span>FIRE MAIN GUN</span>
+        <b>RMB</b><span>GUNNER ZOOM</span>
+        <b>WHEEL</b><span>CAMERA DISTANCE</span>
+        <b>R</b><span>MANUAL RELOAD</span>
+        <b>ESC</b><span>PAUSE / RELEASE MOUSE</span>
+        <b>CLICK</b><span>CAPTURE MOUSE TO AIM</span>
+      </div>
+      <div class="lobby-actions"><button class="btn accent" id="btnControlsBack">BACK</button></div>
+    </div>
+  </div>
+
+  <!-- ============ ABOUT ============ -->
+  <div class="screen" id="screen-about">
+    <div class="panel form-panel">
+      <h2 style="text-align:center;margin-bottom:24px;">ABOUT</h2>
+      <div class="about-text">
+        TANKFIELD is a browser-based multiplayer tank combat game.
+        Real-time battles run on a server-authoritative physics sim at 30 Hz;
+        your client predicts motion locally and reconciles with the battlefield.
+        <br /><br />
+        BATTLES: Team Deathmatch — 10 vs 10, 600 seconds, first to 25 kills.
+        <br /><br />
+        FOUR CHASSIS: VANGUARD (medium), BULWARK (heavy), RAPTOR (scout),
+        BASILISK (tank destroyer). Picking a flank matters: front armour is
+        strongest, engines live in the rear, and the roof is never your friend.
+        <br /><br />
+        ALL PROCEDURAL — terrain, tanks, effects and audio are generated in code.
+        No image assets. Plays in Chrome, Edge and Firefox.
+      </div>
+      <div class="lobby-actions"><button class="btn accent" id="btnAboutBack">BACK</button></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULTS ============ -->
+  <div class="screen" id="screen-results">
+    <div class="panel form-panel" style="text-align:center;">
+      <h1>BATTLE OVER</h1>
+      <div id="resultsTitle">DRAW</div>
+      <div id="resultsScore">0 — 0</div>
+      <div id="resultsList"></div>
+      <div class="lobby-actions" style="justify-content:center;">
+        <button class="btn accent" id="btnAgain">START NEXT</button>
+        <button class="btn" id="btnResultsLobby">BACK TO LOBBY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div class="overlay" id="pause">
+    <div class="card">
+      <h2 style="text-align:center;margin-bottom:18px;color:var(--accent);">PAUSED</h2>
+      <div class="overlay-actions">
+        <button class="btn accent" id="btnResume">RESUME</button>
+        <button class="btn danger" id="btnPauseLeave">LEAVE MATCH</button>
+        <button class="btn" id="btnMenuBack">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DISCONNECTED ============ -->
+  <div class="overlay" id="disconnected">
+    <div class="card">
+      <h2 style="text-align:center;color:var(--danger);">SIGNAL LOST</h2>
+      <div style="text-align:center;margin-top:10px;font-size:12px;letter-spacing:2px;color:var(--hud-dim);" id="reason">CONNECTING&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ============ DEATH ============ -->
+  <div id="death">
+    <div class="card">
+      <div class="big">DESTROYED</div>
+      <div class="sub">RE-DEPLOYING IN <span id="deathCount">0</span></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/index.js"></script>
+</body>
+</html>

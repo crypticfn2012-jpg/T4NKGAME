@@ -1,0 +1,27 @@
+{
+  "name": "tankfield",
+  "version": "1.0.0",
+  "description": "TANKFIELD — a browser-based multiplayer tank combat game. Three.js client, Node.js authoritative WebSocket server.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:server": "node server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "serve": "node server/index.js",
+    "test": "node test/e2e.js",
+    "test:server": "node test/sim.js"
+  },
+  "dependencies": {
+    "simplex-noise": "^4.0.3",
+    "three": "^0.170.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
