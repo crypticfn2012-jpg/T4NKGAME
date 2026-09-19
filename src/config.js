@@ -152,7 +152,9 @@ export const CONFIG = {
     shoulder: 0.6,
     mouseSensitivity: 0.0032,
     fovMin: 45,
-    fovMax: 90
+    fovMax: 90,
+    fovPunch: 2.6,          // deg added to FOV on firing (recoil feel)
+    fovPunchDecay: 8        // 1/decay ~ FOV return time in seconds
   },
 
   // --- Effects -------------------------------------------------------------

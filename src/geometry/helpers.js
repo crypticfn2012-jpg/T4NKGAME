@@ -70,9 +70,32 @@ export function mergePartsToMeshes(parts, resolve = (m) => m) {
 
   const meshes = [];
   for (const [mat, geos] of buckets) {
+    ensureCommonAttributes(geos);
     const geometry = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
     geometry.computeBoundingSphere();
     meshes.push(new THREE.Mesh(geometry, mat));
   }
   return meshes;
+}
+
+// mergeGeometries() requires every source to expose the SAME attribute set.
+// Some parts carry baked vertex colors (addVertexVariation) and others don't,
+// so pad the missing attributes with neutral defaults before merging.
+function ensureCommonAttributes(geos) {
+  const all = new Set();
+  for (const g of geos) {
+    for (const name of Object.keys(g.attributes)) all.add(name);
+  }
+  for (const g of geos) {
+    for (const name of all) {
+      if (!g.attributes[name]) {
+        const ref = geos.find((x) => x.attributes[name]) || g;
+        const itemSize = (ref.attributes[name] || ref.attributes.position).itemSize;
+        const count = g.attributes.position.count;
+        const arr = new Float32Array(count * itemSize);
+        if (name === 'color') arr.fill(1); // neutral white
+        g.setAttribute(name, new THREE.BufferAttribute(arr, itemSize));
+      }
+    }
+  }
 }

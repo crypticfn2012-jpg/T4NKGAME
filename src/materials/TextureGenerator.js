@@ -11,10 +11,11 @@ export function createCanvas(w = 128, h = 128) {
   return c;
 }
 
-export function createCanvasTexture(canvas, { wrapS, wrapT, srgb = true } = {}) {
+export function createCanvasTexture(canvas, { wrapS, wrapT, srgb = true, flipY = true } = {}) {
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = wrapS ?? THREE.RepeatWrapping;
   t.wrapT = wrapT ?? THREE.RepeatWrapping;
+  t.flipY = flipY;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   return t;
@@ -46,6 +47,24 @@ export function hazardTexture({ stripes = 6, c1 = '#d9a13c', c2 = '#1d1d1b' } = 
   const canvas = createCanvas(w, h);
   const ctx = canvas.getContext('2d');
   drawStripes(ctx, w, h, stripes, c1, c2, true);
+  return canvas;
+}
+
+// Vertical day-sky gradient used by the skydome (drawn top→bottom exactly
+// like the dome's UVs: v=1 at the zenith, v=0 at the horizon).
+export function skyGradientTexture(stops = [
+  [0.0, '#7ea6cf'],
+  [0.45, '#b7c8d8'],
+  [0.72, '#dfd2b8'],
+  [1.0, '#c2ad8c']
+]) {
+  const w = 8, h = 512;
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  for (const [t, color] of stops) g.addColorStop(t, color);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
   return canvas;
 }
 

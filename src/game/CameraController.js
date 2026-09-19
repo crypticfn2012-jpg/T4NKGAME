@@ -22,6 +22,7 @@ export class CameraController {
     this.yaw = 0;
     this.pitch = cfg.camera.defaultPitch;
     this.shakeAmp = 0;
+    this.fovPunch = 0;
 
     this.camPos = new THREE.Vector3(50, 20, 50);
     this.lookTarget = new THREE.Vector3(0, 2, 0);
@@ -47,6 +48,10 @@ export class CameraController {
 
   addShake(amount) {
     this.shakeAmp = Math.min(this.shakeCfg.maxDeg, this.shakeAmp + amount);
+  }
+
+  punchFov(amount) {
+    this.fovPunch = Math.min(8, this.fovPunch + amount);
   }
 
   update(dt, tankState, aimPoint, gunner) {
@@ -88,7 +93,8 @@ export class CameraController {
 
     this.camera.position.copy(this.camPos).add(this.shake);
     this.camera.lookAt(this.lookTarget.x, this.lookTarget.y + 2, this.lookTarget.z);
-    this.fov = this._fovTo;
+    this.fovPunch = Math.max(0, this.fovPunch - c.fovPunchDecay * dt);
+    this.fov = this._fovTo + this.fovPunch;
     this.camera.fov = this.fov;
     this.camera.updateProjectionMatrix();
   }

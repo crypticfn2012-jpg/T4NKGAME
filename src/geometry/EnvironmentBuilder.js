@@ -75,8 +75,8 @@ export class EnvironmentBuilder {
     const bag = new THREE.BoxGeometry(1.15, 0.5, 0.62);
     const geos = [];
     for (let i = 0; i < 3; i++) { const g = bag.clone(); g.translate(-0.9 + i * 0.9, 0.0, 0); geos.push(g); }
-    for (let i = 0; i < 2; i++) { const g = bag.clone(); g.rotation.z = 0.06; g.translate(-0.45 + i * 0.9, 0.48, 0); geos.push(g); }
-    const top = bag.clone(); top.rotation.z = -0.05; top.translate(0, 0.96, 0); geos.push(top);
+    for (let i = 0; i < 2; i++) { const g = bag.clone(); g.rotateZ(0.06); g.translate(-0.45 + i * 0.9, 0.48, 0); geos.push(g); }
+    const top = bag.clone(); top.rotateZ(-0.05); top.translate(0, 0.96, 0); geos.push(top);
     const merged = mergeGeometries(geos, false);
     merged.translate(0, 0.25, 0);
     return this._whiteColor(merged);
@@ -187,7 +187,7 @@ export class EnvironmentBuilder {
     }
     place(barrels, barrelSpots, () => new THREE.Color().setScalar(randRange(rand, 0.78, 1.1)));
     // bands reuse barrel transforms; skip (zero-scale) where unbranded.
-    const bandSpots = barrelSpots.map((s) => (s.banded ? s : null));
+    const bandSpots = barrelSpots.filter((s) => s.banded);
     place(bands, bandSpots, () => new THREE.Color(1, 1, 1));
 
     // --- sandbags ---
@@ -392,7 +392,7 @@ export class EnvironmentBuilder {
       const z = Math.sin((i / 6) * Math.PI * 2) * 3.4;
       const bag = new THREE.BoxGeometry(1.6, 0.6, 0.9);
       bag.translate(x, 4.7, z);
-      bag.rotation.y = (i / 6) * Math.PI * 2;
+      bag.rotateY((i / 6) * Math.PI * 2);
       parts.push({ geometry: bag, material: sandbag });
     }
     placeAt(parts, lm.x, lm.z, lm.yaw);
@@ -420,7 +420,7 @@ export class EnvironmentBuilder {
     for (const [dx, dz, s] of [[2, 1.2, 1], [3, -1, 0.8], [4.5, 0.4, 0.6]]) {
       const chunk = new THREE.BoxGeometry(1.6 * s, 0.8, 1.6 * s);
       chunk.translate(dx, 0.4, dz);
-      chunk.rotation.y = dz;
+      chunk.rotateY(dz);
       parts.push({ geometry: chunk, material: concrete });
     }
     placeAt(parts, lm.x, lm.z, lm.yaw);

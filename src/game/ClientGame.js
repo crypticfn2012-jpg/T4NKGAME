@@ -392,6 +392,7 @@ export class ClientGame {
     const v = this.views.get(this.selfId);
     if (v) v.view.recoil(0.55);
     this.cam.addShake(this.cfg.effects.shake.fire);
+    this.cam.punchFov(this.cfg.camera.fovPunch);
     this.effects.muzzleFlash(muzzle.x, muzzle.y, muzzle.z, muzzle.dir.x, muzzle.dir.y, muzzle.dir.z);
   }
 

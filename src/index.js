@@ -7,7 +7,7 @@ import { createTerrain } from '../shared/terrain.js';
 import { MaterialLibrary } from './materials/MaterialLibrary.js';
 import { createTerrainGeometry } from './geometry/TerrainBuilder.js';
 import { EnvironmentBuilder } from './geometry/EnvironmentBuilder.js';
-import { glowTexture, createCanvasTexture } from './materials/TextureGenerator.js';
+import { glowTexture, skyGradientTexture, createCanvasTexture } from './materials/TextureGenerator.js';
 import { NetClient } from './net/NetClient.js';
 import { InputManager } from './game/InputManager.js';
 import { AudioManager } from './game/AudioManager.js';
@@ -70,6 +70,8 @@ async function boot() {
     sun.shadow.camera.bottom = -600;
     sun.shadow.camera.far = 1800;
     sun.shadow.bias = -0.0015;
+    sun.shadow.normalBias = 0.35;   // softens edge acne on the terrain
+    sun.shadow.radius = 3;          // PCF penumbra with PCFSoftShadowMap
     scene.add(sun);
     scene.add(sun.target);
 
@@ -200,11 +202,22 @@ function loop(now) {
 }
 
 function _buildSky() {
+  // Gradient dome — a single canvas texture mapped on an inverted sphere.
+  // Fog- and tone-map-free so the sky keeps its own colour.
+  const skyCanvas = createCanvasTexture(skyGradientTexture(), { flipY: false, wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping });
+  const skyMat = new THREE.MeshBasicMaterial({
+    map: skyCanvas, side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(4000, 32, 16), skyMat);
+  dome.frustumCulled = false;
+  scene.add(dome);
+
   const glowCanvas = createCanvasTexture(glowTexture(), { wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping });
   const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map: glowCanvas, color: 0xffe0a0,
     transparent: true, opacity: 0.85, depthWrite: false, fog: false
   }));
+  sunSprite.frustumCulled = false;
   sunSprite.scale.set(260, 260, 1);
   const sunDir = new THREE.Vector3(320, 520, 190).normalize();
   sunSprite.position.copy(sunDir.multiplyScalar(2400));
@@ -222,6 +235,7 @@ function _buildSky() {
     s.position.set((rnd() - 0.5) * 2600, 420 + rnd() * 260, (rnd() - 0.5) * 2600);
     const sc = 220 + rnd() * 320;
     s.scale.set(sc * 2.2, sc, 1);
+    s.frustumCulled = false;
     const vel = 1.2 + rnd() * 2.2;
     s.userData.vel = vel;
     s.userData.baseY = s.position.y;

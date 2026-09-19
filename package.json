@@ -14,6 +14,7 @@
     "start": "node server/index.js",
     "serve": "node server/index.js",
     "test": "node test/e2e.js",
+    "test:client": "node test/clientboot.test.mjs",
     "test:server": "node test/sim.js"
   },
   "dependencies": {
