@@ -216,6 +216,7 @@ export class ClientGame {
     this._showedResults = false;
     this.ui.showGame();
     this.hud.show(true);
+    this.input.lock();   // grab the pointer so aim/drive actually respond
     this.aim.yaw = 0;
     this.aim.pitch = this.cfg.camera.defaultPitch;
     this.cam.reset(0, this.cfg.camera.defaultPitch);
